@@ -15,7 +15,6 @@ extern "C" {
 
 struct html_source_data {
 	obs_source_t *source;
-	struct dstr html;
 	time_t html_time;
 	pthread_t thread;
 	bool stop;

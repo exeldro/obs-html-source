@@ -119,7 +119,6 @@ static void *html_source_create(obs_data_t *settings, obs_source_t *source)
 	struct html_source_data *hs = (struct html_source_data *)bzalloc(sizeof(struct html_source_data));
 	hs->source = source;
 	hs->sleep = 100;
-	dstr_init(&hs->html);
 
 	pthread_create(&hs->thread, NULL, html_source_thread, hs);
 
@@ -141,7 +140,6 @@ static void html_source_destroy(void *data)
 		curl_slist_free_all(hs->curl_header);
 	if (hs->curl)
 		curl_easy_cleanup(hs->curl);
-	dstr_free(&hs->html);
 	da_free(hs->web_data);
 	bfree(hs);
 }
@@ -262,9 +260,14 @@ static obs_properties_t *html_source_properties(void *data)
 static void html_source_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_int(settings, "sleep", 300);
-	obs_data_t *font = obs_data_create();
-	obs_data_set_int(font, "size", 32);
-	obs_data_set_default_obj(settings, "font", font);
+
+
+	obs_data_t *font = obs_data_get_obj(settings, "font");
+	if (!font) {
+		font = obs_data_create();
+		obs_data_set_default_obj(settings, "font", font);
+	}
+	obs_data_set_default_int(font, "size", 32);
 	obs_data_release(font);
 }
 

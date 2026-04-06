@@ -7,11 +7,6 @@
 void render_qt(struct html_source_data *hs, obs_data_t *settings)
 {
 
-	const char *new_html = obs_data_get_string(settings, "text");
-	if (hs->html.array && strcmp(hs->html.array, new_html) == 0)
-		return;
-	dstr_copy(&hs->html, new_html);
-
 	QTextDocument td;
 	long long source_type = obs_data_get_int(settings, "html_source");
 	if (source_type == HTML_FILE) {
@@ -49,7 +44,8 @@ void render_qt(struct html_source_data *hs, obs_data_t *settings)
 		f.setPointSize(32);
 	}
 	td.setDefaultFont(f);
-	td.setHtml(QString::fromUtf8(hs->html.array));
+	const char *html = obs_data_get_string(settings, "text");
+	td.setHtml(QString::fromUtf8(html));
 	auto size = td.documentLayout()->documentSize();
 	if (!hs->texture || size != QSizeF(hs->cx, hs->cy)) {
 		obs_enter_graphics();
