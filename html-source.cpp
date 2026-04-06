@@ -40,6 +40,7 @@ void render_qt(struct html_source_data *hs, obs_data_t *settings)
 			f.setUnderline(true);
 		if (flags & OBS_FONT_STRIKEOUT)
 			f.setStrikeOut(true);
+		obs_data_release(font);
 	} else {
 		f.setPointSize(32);
 	}
