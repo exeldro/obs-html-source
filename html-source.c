@@ -97,6 +97,10 @@ static void *html_source_thread(void *data)
 	while (!hs->stop) {
 		os_sleep_ms(hs->sleep);
 		obs_data_t *settings = obs_source_get_settings(hs->source);
+		if (!obs_data_get_bool(settings, "refresh")) {
+			obs_data_release(settings);
+			continue;
+		}
 		long long source_type = obs_data_get_int(settings, "html_source");
 		if (source_type == HTML_FILE) {
 			if (html_source_file_changed(&hs->html_time, settings))
@@ -117,12 +121,6 @@ static void *html_source_create(obs_data_t *settings, obs_source_t *source)
 	hs->sleep = 100;
 	dstr_init(&hs->html);
 
-	long long source_type = obs_data_get_int(settings, "html_source");
-	if (source_type == HTML_FILE) {
-		html_source_file_changed(&hs->html_time, settings);
-	} else if (source_type == HTML_WEB) {
-		html_source_web_changed(hs, settings);
-	}
 	pthread_create(&hs->thread, NULL, html_source_thread, hs);
 
 	obs_source_update(source, settings);
@@ -200,7 +198,14 @@ static void html_source_update(void *data, obs_data_t *settings)
 	hs->sleep = (uint32_t)obs_data_get_int(settings, "sleep");
 	if (!hs->sleep)
 		hs->sleep = 100;
-
+	if (!obs_data_get_bool(settings, "refresh")) {
+		long long source_type = obs_data_get_int(settings, "html_source");
+		if (source_type == HTML_FILE) {
+			html_source_file_changed(&hs->html_time, settings);
+		} else if (source_type == HTML_WEB) {
+			html_source_web_changed(hs, settings);
+		}
+	}
 	obs_queue_task(OBS_TASK_UI, render_qt_task, hs, false);
 }
 
@@ -216,6 +221,8 @@ static bool html_source_changed(void *data, obs_properties_t *props, obs_propert
 	obs_property_set_visible(p, source_type == HTML_FILE);
 	p = obs_properties_get(props, "html_url");
 	obs_property_set_visible(p, source_type == HTML_WEB);
+	p = obs_properties_get(props, "refesh");
+	obs_property_set_visible(p, source_type != HTML_TEXT);
 	p = obs_properties_get(props, "sleep");
 	obs_property_set_visible(p, source_type != HTML_TEXT);
 	return true;
@@ -239,7 +246,8 @@ static obs_properties_t *html_source_properties(void *data)
 
 	obs_properties_add_text(props, "html_url", obs_module_text("HtmlUrl"), OBS_TEXT_DEFAULT);
 
-	p = obs_properties_add_int(props, "sleep", obs_module_text("Refresh"), 1, 10000, 1);
+	obs_properties_add_bool(props, "refesh", obs_module_text("Refresh"));
+	p = obs_properties_add_int(props, "sleep", obs_module_text("Refresh"), 1, 1000000, 1);
 	obs_property_int_set_suffix(p, "ms");
 
 	obs_properties_add_text(props, "plugin_info",
