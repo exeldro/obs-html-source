@@ -263,7 +263,7 @@ static void html_source_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_int(settings, "sleep", 300);
 	obs_data_t *font = obs_data_create();
-	obs_data_set_int(font, "size", 72);
+	obs_data_set_int(font, "size", 32);
 	obs_data_set_default_obj(settings, "font", font);
 	obs_data_release(font);
 }

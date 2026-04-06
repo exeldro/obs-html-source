@@ -13,6 +13,14 @@ void render_qt(struct html_source_data *hs, obs_data_t *settings)
 	dstr_copy(&hs->html, new_html);
 
 	QTextDocument td;
+	long long source_type = obs_data_get_int(settings, "html_source");
+	if (source_type == HTML_FILE) {
+		auto url = QUrl::fromLocalFile(QString::fromUtf8(obs_data_get_string(settings, "html_path"))).toString();
+		td.setMetaInformation(QTextDocument::DocumentUrl, url);
+	} else if (source_type == HTML_WEB) {
+		auto url = QString::fromUtf8(obs_data_get_string(settings, "html_url"));
+		td.setMetaInformation(QTextDocument::DocumentUrl, url);
+	}
 	auto f = td.defaultFont();
 	obs_data_t *font = obs_data_get_obj(settings, "font");
 	if (font) {
@@ -27,7 +35,7 @@ void render_qt(struct html_source_data *hs, obs_data_t *settings)
 		if (fs > 0)
 			f.setPointSize(fs);
 		else
-			f.setPointSize(72);
+			f.setPointSize(32);
 		uint32_t flags = (uint32_t)obs_data_get_int(font, "flags");
 		if (flags & OBS_FONT_BOLD)
 			f.setBold(true);
@@ -38,7 +46,7 @@ void render_qt(struct html_source_data *hs, obs_data_t *settings)
 		if (flags & OBS_FONT_STRIKEOUT)
 			f.setStrikeOut(true);
 	} else {
-		f.setPointSizeF(72.0);
+		f.setPointSize(32);
 	}
 	td.setDefaultFont(f);
 	td.setHtml(QString::fromUtf8(hs->html.array));
