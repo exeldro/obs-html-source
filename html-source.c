@@ -246,9 +246,11 @@ static obs_properties_t *html_source_properties(void *data)
 
 	obs_properties_add_text(props, "html_url", obs_module_text("HtmlUrl"), OBS_TEXT_DEFAULT);
 
-	obs_properties_add_bool(props, "refesh", obs_module_text("Refresh"));
-	p = obs_properties_add_int(props, "sleep", obs_module_text("Refresh"), 1, 1000000, 1);
+	obs_properties_add_bool(props, "refesh", obs_module_text("AutomaticRefresh"));
+	p = obs_properties_add_int(props, "sleep", obs_module_text("RefreshInterval"), 1, 1000000, 1);
 	obs_property_int_set_suffix(p, "ms");
+
+	obs_properties_add_font(props, "font", obs_module_text("DefaultFont"));
 
 	obs_properties_add_text(props, "plugin_info",
 				"<a href=\"https://github.com/exeldro/obs-html-source\">HTML Source</a> (" PROJECT_VERSION
@@ -260,6 +262,10 @@ static obs_properties_t *html_source_properties(void *data)
 static void html_source_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_int(settings, "sleep", 300);
+	obs_data_t *font = obs_data_create();
+	obs_data_set_int(font, "size", 72);
+	obs_data_set_default_obj(settings, "font", font);
+	obs_data_release(font);
 }
 
 struct obs_source_info html_source = {
