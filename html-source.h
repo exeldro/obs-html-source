@@ -28,6 +28,7 @@ struct html_source_data {
 	struct curl_slist *curl_header;
 	char curl_error[CURL_ERROR_SIZE];
 	DARRAY(uint8_t) web_data;
+	bool has_to_render;
 };
 
 void render_qt(struct html_source_data *hs, obs_data_t *settings);

@@ -97,17 +97,28 @@ static void *html_source_thread(void *data)
 	while (!hs->stop) {
 		os_sleep_ms(hs->sleep);
 		obs_data_t *settings = obs_source_get_settings(hs->source);
-		if (!obs_data_get_bool(settings, "refresh")) {
-			obs_data_release(settings);
-			continue;
+		bool refresh = obs_data_get_bool(settings, "refresh");
+		if (refresh) {
+			long long source_type = obs_data_get_int(settings, "html_source");
+			if (source_type == HTML_FILE) {
+				if (html_source_file_changed(&hs->html_time, settings))
+					hs->has_to_render = true;
+			} else if (source_type == HTML_WEB) {
+				if (html_source_web_changed(hs, settings))
+					hs->has_to_render = true;
+			}
 		}
-		long long source_type = obs_data_get_int(settings, "html_source");
-		if (source_type == HTML_FILE) {
-			if (html_source_file_changed(&hs->html_time, settings))
-				obs_source_update(hs->source, NULL);
-		} else if (source_type == HTML_WEB) {
-			if (html_source_web_changed(hs, settings))
-				obs_source_update(hs->source, NULL);
+		if (hs->has_to_render) {
+			hs->has_to_render = false;
+			if (!refresh) {
+				long long source_type = obs_data_get_int(settings, "html_source");
+				if (source_type == HTML_FILE) {
+					html_source_file_changed(&hs->html_time, settings);
+				} else if (source_type == HTML_WEB) {
+					html_source_web_changed(hs, settings);
+				}
+			}
+			render_qt(hs, settings);
 		}
 		obs_data_release(settings);
 	}
@@ -182,29 +193,22 @@ void html_source_render(void *data, gs_effect_t *effect)
 	gs_enable_framebuffer_srgb(prev);
 }
 
-static void render_qt_task(void *data)
-{
-	struct html_source_data *hs = (struct html_source_data *)data;
-	obs_data_t *settings = obs_source_get_settings(hs->source);
-	render_qt(hs, settings);
-	obs_data_release(settings);
-}
-
 static void html_source_update(void *data, obs_data_t *settings)
 {
 	struct html_source_data *hs = (struct html_source_data *)data;
-	hs->sleep = (uint32_t)obs_data_get_int(settings, "sleep");
-	if (!hs->sleep)
+	if (obs_data_get_bool(settings, "refresh")) {
+		hs->sleep = (uint32_t)obs_data_get_int(settings, "sleep");
+		if (!hs->sleep)
+			hs->sleep = 100;
+	} else {
 		hs->sleep = 100;
-	if (!obs_data_get_bool(settings, "refresh")) {
-		long long source_type = obs_data_get_int(settings, "html_source");
-		if (source_type == HTML_FILE) {
-			html_source_file_changed(&hs->html_time, settings);
-		} else if (source_type == HTML_WEB) {
-			html_source_web_changed(hs, settings);
-		}
 	}
-	obs_queue_task(OBS_TASK_UI, render_qt_task, hs, false);
+	hs->has_to_render = true;
+}
+
+static void html_source_load(void* data, obs_data_t* settings) {
+	struct html_source_data *hs = (struct html_source_data *)data;
+	obs_source_update(hs->source, settings);
 }
 
 static bool html_source_changed(void *data, obs_properties_t *props, obs_property_t *property, obs_data_t *settings)
@@ -244,11 +248,21 @@ static obs_properties_t *html_source_properties(void *data)
 
 	obs_properties_add_text(props, "html_url", obs_module_text("HtmlUrl"), OBS_TEXT_DEFAULT);
 
-	obs_properties_add_bool(props, "refesh", obs_module_text("AutomaticRefresh"));
-	p = obs_properties_add_int(props, "sleep", obs_module_text("RefreshInterval"), 1, 1000000, 1);
-	obs_property_int_set_suffix(p, "ms");
+	obs_properties_t *size = obs_properties_create();
+	p = obs_properties_add_int(size, "width", obs_module_text("Width"), 1, 10000, 1);
+	obs_property_int_set_suffix(p, "px");
+	p = obs_properties_add_int(size, "height", obs_module_text("Height"), 1, 10000, 1);
+	obs_property_int_set_suffix(p, "px");
+
+	obs_properties_add_group(props, "fixed_size", obs_module_text("FixedSize"), OBS_GROUP_CHECKABLE, size);
 
 	obs_properties_add_font(props, "font", obs_module_text("DefaultFont"));
+
+	obs_properties_t *refresh = obs_properties_create();
+	//obs_properties_add_bool(props, "refesh", obs_module_text("AutomaticRefresh"));
+	p = obs_properties_add_int(refresh, "sleep", obs_module_text("RefreshInterval"), 1, 1000000, 1);
+	obs_property_int_set_suffix(p, "ms");
+	obs_properties_add_group(props, "refresh", obs_module_text("AutomaticRefresh"), OBS_GROUP_CHECKABLE, refresh);
 
 	obs_properties_add_text(props, "plugin_info",
 				"<a href=\"https://github.com/exeldro/obs-html-source\">HTML Source</a> (" PROJECT_VERSION
@@ -260,8 +274,8 @@ static obs_properties_t *html_source_properties(void *data)
 static void html_source_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_int(settings, "sleep", 300);
-
-
+	obs_data_set_default_int(settings, "width", 800);
+	obs_data_set_default_int(settings, "height", 600);
 	obs_data_t *font = obs_data_get_default_obj(settings, "font");
 	if (!font) {
 		font = obs_data_create();
@@ -279,7 +293,7 @@ struct obs_source_info html_source = {
 	.create = html_source_create,
 	.destroy = html_source_destroy,
 	.update = html_source_update,
-	.load = html_source_update,
+	.load = html_source_load,
 	.get_name = html_source_name,
 	.get_defaults = html_source_defaults,
 	.get_width = html_source_width,
