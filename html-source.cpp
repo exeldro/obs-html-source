@@ -106,7 +106,7 @@ void render_qt(struct html_source_data *hs, obs_data_t *settings)
 		hs->cy = (uint32_t)size.height();
 		if (hs->texture)
 			gs_texture_destroy(hs->texture);
-		hs->texture = gs_texture_create(hs->cx, hs->cy, GS_RGBA, 1, NULL, GS_DYNAMIC);
+		hs->texture = gs_texture_create(hs->cx, hs->cy, GS_BGRA, 1, NULL, GS_DYNAMIC);
 		obs_leave_graphics();
 	}
 	QImage image(hs->cx, hs->cy, QImage::Format_ARGB32_Premultiplied);
