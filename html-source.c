@@ -251,7 +251,8 @@ static obs_properties_t *html_source_properties(void *data)
 	obs_properties_t *size = obs_properties_create();
 	p = obs_properties_add_int(size, "width", obs_module_text("Width"), 1, 10000, 1);
 	obs_property_int_set_suffix(p, "px");
-	obs_properties_add_int(size, "height", obs_module_text("Height"), 1, 10000, 1);
+	p = obs_properties_add_int(size, "height", obs_module_text("Height"), 1, 10000, 1);
+	obs_property_int_set_suffix(p, "px");
 
 	obs_properties_add_group(props, "fixed_size", obs_module_text("FixedSize"), OBS_GROUP_CHECKABLE, size);
 
